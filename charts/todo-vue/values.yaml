@@ -1,0 +1,56 @@
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 1
+
+image:
+  # 默认使用可在 OpenShift（受限权限）运行的 unprivileged nginx，作为可安装的示例镜像。
+  # 生产使用请替换为你的应用镜像。
+  repository: nginxinc/nginx-unprivileged
+  tag: "1.25-alpine"
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: true
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext: {}
+securityContext: {}
+
+service:
+  type: ClusterIP
+  port: 8080
+
+route:
+  enabled: true
+  host: ""
+  tls:
+    enabled: true
+    termination: edge
+
+# 以列表形式追加环境变量
+env: []
+# 以列表形式追加 envFrom（ConfigMapRef/SecretRef）
+envFrom: []
+
+probes:
+  liveness:
+    enabled: false
+    path: /
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readiness:
+    enabled: false
+    path: /
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+resources: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

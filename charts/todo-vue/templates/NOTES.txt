@@ -1,0 +1,8 @@
+1. 获取 Service 访问方式
+
+  kubectl get svc -n {{ .Release.Namespace }} {{ include "todo-vue.fullname" . }}
+
+2. 如果启用了 OpenShift Route（默认启用）
+
+  oc get route -n {{ .Release.Namespace }} {{ include "todo-vue.fullname" . }}
+

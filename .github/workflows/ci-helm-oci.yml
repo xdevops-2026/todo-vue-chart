@@ -1,0 +1,203 @@
+name: Publish Helm Charts (OCI to GHCR)
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+      - "*-v*"
+  workflow_dispatch:
+    inputs:
+      chart:
+        description: "Chart directory under charts/ to publish (e.g., todo-vue) or 'all'"
+        required: true
+        default: "all"
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: helm-oci-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    name: Detect charts to publish
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.matrix.outputs.matrix }}
+      has_charts: ${{ steps.matrix.outputs.has_charts }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Build chart matrix
+        id: matrix
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "event_name=${GITHUB_EVENT_NAME}"
+          echo "ref=${GITHUB_REF}"
+
+          get_all_charts() {
+            if [[ ! -d "charts" ]]; then
+              return 0
+            fi
+            find charts -mindepth 1 -maxdepth 1 -type d -print0 \
+              | xargs -0 -r -I{} basename "{}" \
+              | sort -u
+          }
+
+          chart_dirs=""
+
+          if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
+            input_chart="${{ inputs.chart }}"
+            if [[ "${input_chart}" == "all" ]]; then
+              chart_dirs="$(get_all_charts || true)"
+            else
+              chart_dirs="${input_chart}"
+            fi
+          elif [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+            # Tag-based release publishes all charts.
+            chart_dirs="$(get_all_charts || true)"
+          else
+            # Push to main: publish only changed charts.
+            base_sha="${{ github.event.before }}"
+            head_sha="${GITHUB_SHA}"
+
+            # Handle edge cases like initial commit where before is all zeros.
+            if [[ "${base_sha}" == "0000000000000000000000000000000000000000" ]]; then
+              base_sha="$(git rev-list --max-parents=0 "${head_sha}")"
+            fi
+
+            changed_files="$(git diff --name-only "${base_sha}" "${head_sha}" -- 'charts/**' || true)"
+            chart_dirs="$(echo "${changed_files}" \
+              | awk -F/ '/^charts\// && NF>=2 {print $2}' \
+              | sort -u)"
+          fi
+
+          # Normalize: remove empty lines
+          chart_dirs="$(echo "${chart_dirs}" | sed '/^$/d' || true)"
+
+          # Convert to JSON array for matrix
+          export CHART_DIRS="${chart_dirs}"
+          matrix_json="$(python3 - <<'PY'
+import json, os
+raw = os.environ.get('CHART_DIRS','')
+items = [line.strip() for line in raw.splitlines() if line.strip()]
+print(json.dumps(items))
+PY
+)"
+
+          if [[ "${matrix_json}" == "[]" ]]; then
+            echo "No charts to publish."
+            echo "has_charts=false" >> "${GITHUB_OUTPUT}"
+          else
+            echo "Charts to publish:"; echo "${chart_dirs}"
+            echo "has_charts=true" >> "${GITHUB_OUTPUT}"
+          fi
+
+          echo "matrix=${matrix_json}" >> "${GITHUB_OUTPUT}"
+
+  publish:
+    name: Lint, package, and push
+    needs: detect
+    if: needs.detect.outputs.has_charts == 'true'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        chart_dir: ${{ fromJson(needs.detect.outputs.matrix) }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Helm
+        uses: azure/setup-helm@v4
+        with:
+          version: v3.14.4
+
+      - name: Helm version
+        run: helm version
+
+      - name: Login to GHCR (OCI)
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "${GITHUB_TOKEN}" | helm registry login ghcr.io -u "${GITHUB_ACTOR}" --password-stdin
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Validate OpenShift readiness (Route + OCI source annotation)
+        shell: bash
+        run: |
+          set -euo pipefail
+          chart_path="charts/${{ matrix.chart_dir }}"
+
+          if [[ ! -f "${chart_path}/Chart.yaml" ]]; then
+            echo "Missing Chart.yaml in ${chart_path}" >&2
+            exit 1
+          fi
+
+          # Require a Route manifest for OpenShift.
+          if [[ ! -f "${chart_path}/templates/route.yaml" ]]; then
+            echo "Missing required OpenShift Route template: ${chart_path}/templates/route.yaml" >&2
+            exit 1
+          fi
+
+          # Require OCI source annotation in Chart.yaml.
+          if ! grep -q "org.opencontainers.image.source" "${chart_path}/Chart.yaml"; then
+            echo "Missing required annotation 'org.opencontainers.image.source' in ${chart_path}/Chart.yaml" >&2
+            exit 1
+          fi
+
+          # Basic sanity check for the Route apiVersion.
+          if ! grep -q "route.openshift.io/v1" "${chart_path}/templates/route.yaml"; then
+            echo "Route template does not reference apiVersion route.openshift.io/v1: ${chart_path}/templates/route.yaml" >&2
+            exit 1
+          fi
+
+      - name: Helm lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          helm lint "charts/${{ matrix.chart_dir }}"
+
+      - name: Package and push (nested OCI path, lowercase)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          chart_path="charts/${{ matrix.chart_dir }}"
+          mkdir -p dist
+
+          chart_name="$(helm show chart "${chart_path}" | awk -F': ' '$1=="name"{print $2}')"
+          if [[ -z "${chart_name}" ]]; then
+            echo "Unable to determine chart name for ${chart_path}" >&2
+            exit 1
+          fi
+
+          pkg_path="$(helm package "${chart_path}" --destination dist | sed -n 's/^.*saved it to: //p')"
+          if [[ -z "${pkg_path}" || ! -f "${pkg_path}" ]]; then
+            echo "Packaging failed or artifact missing for ${chart_path}" >&2
+            exit 1
+          fi
+
+          owner_lc="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
+          repo_lc="$(echo "${GITHUB_REPOSITORY}" | cut -d'/' -f2 | tr '[:upper:]' '[:lower:]')"
+          chart_lc="$(echo "${chart_name}" | tr '[:upper:]' '[:lower:]')"
+
+          target="oci://ghcr.io/${owner_lc}/${repo_lc}/${chart_lc}"
+          echo "Pushing ${pkg_path} -> ${target}"
+
+          helm push "${pkg_path}" "${target}"
+        env:
+          HELM_EXPERIMENTAL_OCI: 1

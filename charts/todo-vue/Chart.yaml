@@ -1,0 +1,13 @@
+apiVersion: v2
+name: todo-vue
+description: Todo Vue Helm chart (OpenShift-ready)
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/xdevops-2026/todo-vue-chart
+sources:
+  - https://github.com/xdevops-2026/todo-vue-chart
+annotations:
+  org.opencontainers.image.source: https://github.com/xdevops-2026/todo-vue-chart
+  org.opencontainers.image.title: todo-vue
+  org.opencontainers.image.description: Todo Vue Helm chart (OpenShift-ready)
