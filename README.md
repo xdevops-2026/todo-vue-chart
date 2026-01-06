@@ -43,6 +43,8 @@
   - `oci://ghcr.io/<owner>/<repo>/<chart>`
   - 例如：`oci://ghcr.io/xdevops-2026/todo-vue-chart/todo-vue`
 
+说明：在 OCI 模式下，`helm push <chart.tgz> oci://ghcr.io/<owner>/<repo>` 会自动在 `<repo>` 下创建 `<chart>` 这一层，所以 workflow 里不会把 `<chart>` 拼进 push 目标。
+
 ### 从 GHCR 安装（OCI）
 - **登录 GHCR**：
   - `helm registry login ghcr.io`

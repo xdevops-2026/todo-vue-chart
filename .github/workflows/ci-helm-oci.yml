@@ -70,8 +70,9 @@ jobs:
             head_sha="${GITHUB_SHA}"
 
             # Handle edge cases like initial commit where before is all zeros.
+            # In that case, diff against the empty tree so all added charts are detected.
             if [[ "${base_sha}" == "0000000000000000000000000000000000000000" ]]; then
-              base_sha="$(git rev-list --max-parents=0 "${head_sha}")"
+              base_sha="$(git hash-object -t tree /dev/null)"
             fi
 
             changed_files="$(git diff --name-only "${base_sha}" "${head_sha}" -- 'charts/**' || true)"
@@ -180,7 +181,7 @@ jobs:
           set -euo pipefail
           helm lint "charts/${{ matrix.chart_dir }}"
 
-      - name: Package and push (nested OCI path, lowercase)
+      - name: Package and push (OCI path, lowercase)
         shell: bash
         run: |
           set -euo pipefail
@@ -202,9 +203,12 @@ jobs:
 
           owner_lc="$(echo "${GITHUB_REPOSITORY_OWNER}" | tr '[:upper:]' '[:lower:]')"
           repo_lc="$(echo "${GITHUB_REPOSITORY}" | cut -d'/' -f2 | tr '[:upper:]' '[:lower:]')"
-          chart_lc="$(echo "${chart_name}" | tr '[:upper:]' '[:lower:]')"
 
-          target="oci://ghcr.io/${owner_lc}/${repo_lc}/${chart_lc}"
+          # NOTE:
+          # `helm push <chart.tgz> oci://<host>/<namespace>/<repo>` will create the final artifact under:
+          #   <host>/<namespace>/<repo>/<chart_name>:<chart_version>
+          # so do NOT append the chart name here.
+          target="oci://ghcr.io/${owner_lc}/${repo_lc}"
           echo "Pushing ${pkg_path} -> ${target}"
 
           helm push "${pkg_path}" "${target}"
