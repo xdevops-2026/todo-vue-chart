@@ -6,7 +6,6 @@ on:
       - main
     tags:
       - "v*"
-      - "*-v*"
   workflow_dispatch:
     inputs:
       chart:
