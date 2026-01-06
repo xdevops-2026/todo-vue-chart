@@ -163,11 +163,49 @@ jobs:
             exit 1
           fi
 
+      - name: Helm dependency build (only when dependencies are declared)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          chart_path="charts/${{ matrix.chart_dir }}"
+
+          if grep -Eq '^\s*dependencies\s*:' "${chart_path}/Chart.yaml"; then
+            echo "dependencies declared; running helm dependency build"
+            helm dependency build "${chart_path}"
+          else
+            echo "no dependencies declared; skipping helm dependency build"
+          fi
+
       - name: Helm lint
         shell: bash
         run: |
           set -euo pipefail
           helm lint "charts/${{ matrix.chart_dir }}"
+
+      - name: Install kubeval
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          KUBEVAL_VERSION="0.16.1"
+          curl -sSL -o /tmp/kubeval.tar.gz "https://github.com/instrumenta/kubeval/releases/download/v${KUBEVAL_VERSION}/kubeval-linux-amd64.tar.gz"
+          tar -C /tmp -xzf /tmp/kubeval.tar.gz
+          sudo mv /tmp/kubeval /usr/local/bin/kubeval
+          kubeval --version
+
+      - name: Helm template + kubeval (render checks, no cluster)
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          chart_path="charts/${{ matrix.chart_dir }}"
+          release="render-${{ matrix.chart_dir }}"
+
+          # Render with chart defaults and validate known Kubernetes resource schemas.
+          # CRDs (for example, OpenShift Route) are ignored.
+          helm template "${release}" "${chart_path}" --namespace default \
+            | kubeval --strict --ignore-missing-schemas
 
       - name: Package and push (OCI path, lowercase)
         shell: bash
