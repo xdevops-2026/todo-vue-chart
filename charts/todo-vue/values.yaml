@@ -13,8 +13,8 @@ image:
 imagePullSecrets: []
 
 serviceAccount:
-  create: true
-  name: ""
+  create: false
+  name: default
 
 podAnnotations: {}
 podLabels: {}
