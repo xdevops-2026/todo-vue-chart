@@ -4,11 +4,11 @@ fullnameOverride: ""
 replicaCount: 1
 
 image:
-  # Default to an OpenShift-friendly unprivileged nginx image for a runnable example.
-  # For production, replace with your application image.
-  repository: nginxinc/nginx-unprivileged
-  tag: "1.25-alpine"
-  pullPolicy: IfNotPresent
+  # Default image for the todo-vue application.
+  # NOTE: 'develop' is a floating tag, so use Always to ensure the latest image is pulled.
+  repository: ghcr.io/xdevops-2026/todo-vue
+  tag: develop
+  pullPolicy: Always
 
 imagePullSecrets: []
 
