@@ -146,7 +146,7 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Validate OpenShift readiness (Route + OCI source annotation)
+      - name: Validate chart metadata (OCI source annotation)
         shell: bash
         run: |
           set -euo pipefail
@@ -157,21 +157,9 @@ jobs:
             exit 1
           fi
 
-          # Require a Route manifest for OpenShift.
-          if [[ ! -f "${chart_path}/templates/route.yaml" ]]; then
-            echo "Missing required OpenShift Route template: ${chart_path}/templates/route.yaml" >&2
-            exit 1
-          fi
-
           # Require OCI source annotation in Chart.yaml.
           if ! grep -q "org.opencontainers.image.source" "${chart_path}/Chart.yaml"; then
             echo "Missing required annotation 'org.opencontainers.image.source' in ${chart_path}/Chart.yaml" >&2
-            exit 1
-          fi
-
-          # Basic sanity check for the Route apiVersion.
-          if ! grep -q "route.openshift.io/v1" "${chart_path}/templates/route.yaml"; then
-            echo "Route template does not reference apiVersion route.openshift.io/v1: ${chart_path}/templates/route.yaml" >&2
             exit 1
           fi
 

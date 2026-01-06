@@ -4,8 +4,8 @@ fullnameOverride: ""
 replicaCount: 1
 
 image:
-  # 默认使用可在 OpenShift（受限权限）运行的 unprivileged nginx，作为可安装的示例镜像。
-  # 生产使用请替换为你的应用镜像。
+  # Default to an OpenShift-friendly unprivileged nginx image for a runnable example.
+  # For production, replace with your application image.
   repository: nginxinc/nginx-unprivileged
   tag: "1.25-alpine"
   pullPolicy: IfNotPresent
@@ -19,23 +19,58 @@ serviceAccount:
 podAnnotations: {}
 podLabels: {}
 
-podSecurityContext: {}
-securityContext: {}
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container-level security context.
+# Defaults are compatible with OpenShift restricted SCC (random UID, no privilege escalation).
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
 
 service:
   type: ClusterIP
   port: 8080
+  # Only applies when type=NodePort. If null, the cluster will assign one.
+  nodePort: null
+  annotations: {}
 
+# Kubernetes Ingress (optional)
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: ""
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  # tls:
+  #   - secretName: example-tls
+  #     hosts:
+  #       - example.com
+
+# OpenShift Route (optional; enabled by default)
 route:
   enabled: true
+  annotations: {}
   host: ""
+  path: ""
+  wildcardPolicy: None
   tls:
     enabled: true
     termination: edge
+    # Examples: Redirect / Allow / None
+    insecureEdgeTerminationPolicy: ""
 
-# 以列表形式追加环境变量
+# Extra environment variables (list)
 env: []
-# 以列表形式追加 envFrom（ConfigMapRef/SecretRef）
+# Extra envFrom (ConfigMapRef/SecretRef) (list)
 envFrom: []
 
 probes:

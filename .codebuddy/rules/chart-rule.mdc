@@ -1,0 +1,9 @@
+---
+description: 
+alwaysApply: true
+enabled: true
+updatedAt: 2026-01-06T05:26:38.887Z
+provider: 
+---
+
+1. helm chart代码的注释必须为English。

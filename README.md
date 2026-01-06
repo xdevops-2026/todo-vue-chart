@@ -13,20 +13,27 @@
 
 ### Charts
 - **`todo-vue`**：
-  - **包含资源**：`Deployment`、`Service(ClusterIP)`、可选 OpenShift `Route`、可选 `ServiceAccount`
+  - **包含资源**：`Deployment`、`Service`、可选 `Ingress`、可选 OpenShift `Route`、可选 `ServiceAccount`
   - **默认端口**：`8080`
 
 ### 本地安装/升级（从源码）
 - **安装**：
   - `helm upgrade --install todo-vue charts/todo-vue -n <namespace> --create-namespace`
-- **关闭 Route（例如非 OpenShift 集群）**：
-  - `helm upgrade --install todo-vue charts/todo-vue -n <namespace> --set route.enabled=false`
+- **Kubernetes 对外暴露（可选）**：
+  - **Service**：`--set service.type=NodePort` 或 `--set service.type=LoadBalancer`
+  - **Ingress**：`--set ingress.enabled=true`（并配置 `ingress.hosts`/`ingress.tls`）
+- **OpenShift Route（可选）**：
+  - 默认启用；非 OpenShift 集群请关闭：`--set route.enabled=false`
 
 ### 常用配置（values）
 位于 `charts/todo-vue/values.yaml`：
 - **`image.repository` / `image.tag`**：应用镜像（默认是可在 OpenShift 运行的示例镜像）
+- **`service.type`**：`ClusterIP`/`NodePort`/`LoadBalancer`
 - **`service.port`**：服务端口（默认 `8080`）
-- **`route.enabled`**：是否创建 OpenShift Route（默认 `true`）
+- **`service.nodePort`**：当 `service.type=NodePort` 时可指定端口
+- **`ingress.enabled`**：是否创建 Kubernetes `Ingress`（默认 `false`）
+- **`ingress.className`** / **`ingress.hosts`** / **`ingress.tls`**：Ingress 相关配置
+- **`route.enabled`**：是否创建 OpenShift `Route`（默认 `true`）
 - **`route.host`**：指定 Route Host（默认空，由 OpenShift 自动分配）
 - **`route.tls.enabled`**：是否启用 TLS（默认 `true`）
 - **`route.tls.termination`**：TLS 终止方式（默认 `edge`）

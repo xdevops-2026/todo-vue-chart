@@ -5,9 +5,16 @@ metadata:
   name: {{ include "todo-vue.fullname" . }}
   labels:
     {{- include "todo-vue.labels" . | nindent 4 }}
+  {{- with .Values.route.annotations }}
+  annotations:
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
 spec:
   {{- if .Values.route.host }}
   host: {{ .Values.route.host | quote }}
+  {{- end }}
+  {{- if .Values.route.path }}
+  path: {{ .Values.route.path | quote }}
   {{- end }}
   to:
     kind: Service
@@ -18,6 +25,9 @@ spec:
   {{- if .Values.route.tls.enabled }}
   tls:
     termination: {{ .Values.route.tls.termination | default "edge" }}
+    {{- if .Values.route.tls.insecureEdgeTerminationPolicy }}
+    insecureEdgeTerminationPolicy: {{ .Values.route.tls.insecureEdgeTerminationPolicy | quote }}
+    {{- end }}
   {{- end }}
-  wildcardPolicy: None
+  wildcardPolicy: {{ .Values.route.wildcardPolicy | default "None" }}
 {{- end }}
