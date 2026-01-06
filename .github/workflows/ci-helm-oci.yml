@@ -55,7 +55,7 @@ jobs:
           chart_dirs=""
 
           if [[ "${GITHUB_EVENT_NAME}" == "workflow_dispatch" ]]; then
-            input_chart="${{ inputs.chart }}"
+            input_chart="${{ github.event.inputs.chart || 'all' }}"
             if [[ "${input_chart}" == "all" ]]; then
               chart_dirs="$(get_all_charts || true)"
             else
@@ -83,15 +83,25 @@ jobs:
           # Normalize: remove empty lines
           chart_dirs="$(echo "${chart_dirs}" | sed '/^$/d' || true)"
 
-          # Convert to JSON array for matrix
-          export CHART_DIRS="${chart_dirs}"
-          matrix_json="$(python3 - <<'PY'
-import json, os
-raw = os.environ.get('CHART_DIRS','')
-items = [line.strip() for line in raw.splitlines() if line.strip()]
-print(json.dumps(items))
-PY
-)"
+          # Convert to JSON array for matrix (bash only)
+          matrix_json="[]"
+          if [[ -n "${chart_dirs}" ]]; then
+            mapfile -t _charts <<< "${chart_dirs}"
+            matrix_json="["
+            first=1
+            for c in "${_charts[@]}"; do
+              # Escape for JSON
+              esc="${c//\\/\\\\}"
+              esc="${esc//\"/\\\"}"
+              if [[ ${first} -eq 1 ]]; then
+                first=0
+              else
+                matrix_json+=","
+              fi
+              matrix_json+="\"${esc}\""
+            done
+            matrix_json+="]"
+          fi
 
           if [[ "${matrix_json}" == "[]" ]]; then
             echo "No charts to publish."
