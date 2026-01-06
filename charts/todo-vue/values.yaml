@@ -16,6 +16,10 @@ serviceAccount:
   create: false
   name: default
 
+# For simple web apps that do not call the Kubernetes API, do not mount the service account token.
+# This reduces the blast radius if the application is compromised.
+automountServiceAccountToken: false
+
 podAnnotations: {}
 podLabels: {}
 
@@ -74,18 +78,29 @@ env: []
 envFrom: []
 
 probes:
+  # Health probes are enabled by default to follow cloud-native best practices.
+  # Make sure the configured path(s) return HTTP 200 for your application.
   liveness:
-    enabled: false
+    enabled: true
     path: /
     initialDelaySeconds: 10
     periodSeconds: 10
   readiness:
-    enabled: false
+    enabled: true
     path: /
     initialDelaySeconds: 5
     periodSeconds: 10
 
-resources: {}
+resources:
+  # Baseline resources for a typical Node.js web application.
+  # Tune these based on your actual workload and SLOs.
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
 nodeSelector: {}
 tolerations: []
 affinity: {}
