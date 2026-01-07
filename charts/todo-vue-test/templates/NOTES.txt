@@ -1,0 +1,17 @@
+1. Check Service
+
+  kubectl get svc -n {{ .Release.Namespace }} {{ include "todo-vue.fullname" . }}
+
+2. Expose externally on Kubernetes (optional)
+
+  - Service NodePort / LoadBalancer
+    Set values: service.type=NodePort or service.type=LoadBalancer
+
+  - Ingress (disabled by default)
+    Set values: ingress.enabled=true, and configure ingress.hosts / ingress.tls
+
+3. OpenShift Route (optional)
+
+  Enabled by default. To disable: route.enabled=false
+  oc get route -n {{ .Release.Namespace }} {{ include "todo-vue.fullname" . }}
+

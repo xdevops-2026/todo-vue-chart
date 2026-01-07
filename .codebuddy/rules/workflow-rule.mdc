@@ -1,0 +1,15 @@
+---
+description: 
+alwaysApply: true
+enabled: true
+updatedAt: 2026-01-07T02:05:41.325Z
+provider: 
+---
+
+1. 注释必须使用English。
+2. 不允许定义或保留没有使用的变量。
+3. 确保workflow有且只有必要的权限。
+4. 确保workflow的相关step的一致。
+5. 不允许使用没有定义的变量。
+6. 确保workflow, job, step的name有描述性。
+7. 不要hardcode concurrency.group

@@ -1,0 +1,106 @@
+nameOverride: ""
+fullnameOverride: ""
+
+replicaCount: 1
+
+image:
+  # Default image for the todo-vue application.
+  # NOTE: 'develop' is a floating tag, so use Always to ensure the latest image is pulled.
+  repository: ghcr.io/xdevops-2026/todo-vue
+  tag: develop
+  pullPolicy: Always
+
+imagePullSecrets: []
+
+serviceAccount:
+  create: false
+  name: default
+
+# For simple web apps that do not call the Kubernetes API, do not mount the service account token.
+# This reduces the blast radius if the application is compromised.
+automountServiceAccountToken: false
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  seccompProfile:
+    type: RuntimeDefault
+
+# Container-level security context.
+# Defaults are compatible with OpenShift restricted SCC (random UID, no privilege escalation).
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  runAsNonRoot: true
+
+service:
+  type: ClusterIP
+  port: 8080
+  # Only applies when type=NodePort. If null, the cluster will assign one.
+  nodePort: null
+  annotations: {}
+
+# Kubernetes Ingress (optional)
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  hosts:
+    - host: ""
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []
+  # tls:
+  #   - secretName: example-tls
+  #     hosts:
+  #       - example.com
+
+# OpenShift Route (optional; enabled by default)
+route:
+  enabled: true
+  annotations: {}
+  host: ""
+  path: ""
+  wildcardPolicy: None
+  tls:
+    enabled: true
+    termination: edge
+    # Examples: Redirect / Allow / None
+    insecureEdgeTerminationPolicy: ""
+
+# Extra environment variables (list)
+env: []
+# Extra envFrom (ConfigMapRef/SecretRef) (list)
+envFrom: []
+
+probes:
+  # Health probes are enabled by default to follow cloud-native best practices.
+  # Make sure the configured path(s) return HTTP 200 for your application.
+  liveness:
+    enabled: true
+    path: /
+    initialDelaySeconds: 10
+    periodSeconds: 10
+  readiness:
+    enabled: true
+    path: /
+    initialDelaySeconds: 5
+    periodSeconds: 10
+
+resources:
+  # Baseline resources for a typical Node.js web application.
+  # Tune these based on your actual workload and SLOs.
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 500m
+    memory: 512Mi
+
+nodeSelector: {}
+tolerations: []
+affinity: {}

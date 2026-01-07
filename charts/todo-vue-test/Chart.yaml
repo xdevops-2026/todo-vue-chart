@@ -1,0 +1,13 @@
+apiVersion: v2
+name: todo-vue-test
+description: Todo Vue Helm chart (test copy for multi-chart workflows)
+type: application
+version: 0.1.1
+appVersion: "0.1.1"
+home: https://github.com/xdevops-2026/todo-vue-chart
+sources:
+  - https://github.com/xdevops-2026/todo-vue-chart
+annotations:
+  org.opencontainers.image.source: https://github.com/xdevops-2026/todo-vue-chart
+  org.opencontainers.image.title: todo-vue-test
+  org.opencontainers.image.description: Todo Vue Helm chart (test copy for multi-chart workflows)
