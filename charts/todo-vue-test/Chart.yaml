@@ -2,8 +2,8 @@ apiVersion: v2
 name: todo-vue-test
 description: Todo Vue Helm chart (test copy for multi-chart workflows)
 type: application
-version: 0.1.1
-appVersion: "0.1.1"
+version: 0.1.2
+appVersion: "0.1.2"
 home: https://github.com/xdevops-2026/todo-vue-chart
 sources:
   - https://github.com/xdevops-2026/todo-vue-chart
